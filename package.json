@@ -1,0 +1,7 @@
+{
+  "name": "polaroid",
+  "version": "1.0.0",
+  "dependencies": {
+    "octonode": "^0.10.2"
+  }
+}
