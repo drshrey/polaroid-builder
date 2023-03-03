@@ -159,6 +159,8 @@ function worker() {
         const pushCommand = `docker push drshrey/${imageName}:${imageTag}`;
         const pushOutput = execSync(pushCommand);
         console.log(pushOutput.toString());
+
+        fs.writeFileSync('rails-dockerfiles/alpine3.11/Dockerfile', dockerfile);
     }
 }
 
