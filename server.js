@@ -4,9 +4,9 @@ var fs = require('fs');
 const { execSync, exec } = require('child_process');
 
 var client = github.client('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');
-var ghrepo = client.repo('drshrey/rails-dockerfiles');
+var ghrepo = client.repo('drshrey/polaroid-example-rails-app');
 
-const dirname = 'drshrey/rails-dockerfiles/alpine3.11'
+const dirname = 'drshrey/polaroid-example-rails-app'
 
 function worker() {
     console.log("Running worker at " + new Date().toISOString());
@@ -14,7 +14,7 @@ function worker() {
     var changed = false;
 
     // check if Gemfile is different than what is in the file
-    ghrepo.contents('alpine3.11/Gemfile', function(err, data, headers) {
+    ghrepo.contents('Gemfile', function(err, data, headers) {
         console.log(err, data)
         // check if file exists in filesystem
         if (!fs.existsSync(dirname) || !fs.existsSync(dirname + '/Gemfile')) {
@@ -34,7 +34,7 @@ function worker() {
                 if (err) {
                     return console.log(err);
                 }
-                // check if content is different than what is in the file
+                // check if content is different from what is in the file
                 if (data.content !== fileData) {
                     fs.writeFile(dirname + '/Gemfile', data.content, function (err) {
                         if (err) return console.log(err);
@@ -57,7 +57,7 @@ function worker() {
         return
     }
 
-    ghrepo.contents('alpine3.11/Dockerfile', function(err, data, headers) {
+    ghrepo.contents('Dockerfile', function(err, data, headers) {
         // check if file exists in filesystem
         if (!fs.existsSync(dirname) || !fs.existsSync(dirname + '/Dockerfile')) {
             // write the content to a file
@@ -76,7 +76,7 @@ function worker() {
                 if (err) {
                     return console.log(err);
                 }
-                // check if content is different than what is in the file
+                // check if content is different from what is in the file
                 if (data.content !== fileData) {
                     fs.writeFile(dirname + '/Dockerfile', data.content, function (err) {
                         if (err) return console.log(err);
@@ -97,23 +97,24 @@ function worker() {
         // build a docker image and push it to a registry
         // Define Dockerfile path, image name and tag, and registry URL
 
-        const repoUrl = 'https://github.com/drshrey/rails-dockerfiles.git';
-        const targetDir = './rails-dockerfiles';
+        const repoUrl = 'https://github.com/drshrey/polaroid-example-rails-app.git';
+        const targetDir = './drshrey/polaroid-example-rails-app';
 
         if (!fs.existsSync(targetDir)) {
-            execSync(`git clone ${repoUrl} rails-dockerfiles`);
+            execSync(`git clone ${repoUrl} polaroid-example-rails-app`);
         } else {
-            execSync(`cd rails-dockerfiles && git pull`);
+            execSync(`cd polaroid-example-rails-app && git pull`);
         }
 
-        const dockerfilePath = 'rails-dockerfiles/alpine3.11/Dockerfile';
+        const dockerfilePath = 'drshrey/polaroid-example-rails-app/Dockerfile';
         const imageName = dirname.split('/').join('-');
         const imageTag = Date.now().toString();
         const registryUrl = 'drshrey';
 
+        // TODO: Read from Gemfile.lock instead of Gemfile
         // add Gemfile deps to end of dockerfile for install (cuz we're slick like dat)
         // get gemfile dependencies from Gemfile into an array
-        const gemfile = fs.readFileSync('rails-dockerfiles/alpine3.11/Gemfile', 'utf8');
+        const gemfile = fs.readFileSync('drshrey/polaroid-example-rails-app/Gemfile', 'utf8');
         const gemfileLines = gemfile.split('\n');
         const gemfileDeps = [];
         gemfileLines.forEach(line => {
@@ -128,9 +129,8 @@ function worker() {
         console.log(gemfileDeps);
 
         // append 'gem install' commands to end of dockerfile
-        const dockerfile = fs.readFileSync('rails-dockerfiles/alpine3.11/Dockerfile', 'utf8');
+        const dockerfile = fs.readFileSync('drshrey/polaroid-example-rails-app/Dockerfile', 'utf8');
         const dockerfileLines = dockerfile.split('\n');
-        const dockerfileDeps = [];
         gemfileDeps.forEach(dep => {
             dockerfileLines.push(`RUN gem install ${dep.name} -v ${dep.version}`);
         });
@@ -138,7 +138,7 @@ function worker() {
         const newDockerfile = dockerfileLines.join('\n');
         console.log(newDockerfile)
 
-        fs.writeFileSync('rails-dockerfiles/alpine3.11/Dockerfile', newDockerfile);
+        fs.writeFileSync('drshrey/polaroid-example-rails-app/Dockerfile', newDockerfile);
 
 
         const loginCommand = `docker login -u ${process.env.DOCKER_USERNAME} -p ${process.env.DOCKER_PASSWORD}`;
@@ -146,7 +146,7 @@ function worker() {
         console.log(loginOutput.toString());
 
         // Build Docker image
-        const buildCommand = `docker build -t drshrey/${imageName}:${imageTag} -f ${dockerfilePath} rails-dockerfiles/alpine3.11/`;
+        const buildCommand = `docker build -t drshrey/${imageName}:${imageTag} -f ${dockerfilePath} drshrey/polaroid-example-rails-app`;
         const buildOutput = execSync(buildCommand);
         console.log(buildOutput.toString());
 
@@ -160,11 +160,8 @@ function worker() {
         const pushOutput = execSync(pushCommand);
         console.log(pushOutput.toString());
 
-        fs.writeFileSync('rails-dockerfiles/alpine3.11/Dockerfile', dockerfile);
+        fs.writeFileSync('drshrey/polaroid-example-rails-app/Dockerfile', dockerfile);
     }
 }
 
-console.log("Starting worker")
-setInterval(worker, 10000);
-
-// gem 'nokogiri', '1.14.2'
+worker()
